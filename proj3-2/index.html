@@ -15,8 +15,12 @@
 </head>
 <body>
 <br />
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2022</h1>
+
 <h1 align="middle">Assignment 3-2: PathTracer</h1>
     <h2 align="middle">Sydney Karimi and Shaina Chen</h2>
+    <h3 align="middle"><a href="https://cal-cs184-student.github.io/sp22-project-webpages-shainachen/proj3-2/index.html">cal-cs184-student.github.io/sp22-project-webpages-shainachen/proj3-2</a></h3>
+
 
     <div class="padded">
         <p>In this project, we implemented Task 1 (Mirror and Glass Materials) and Task 4 (Depth of Field). This allowed us to enhance the renders from project 3-1 with new materials and camera capabilities. In Task 1, we implemented reflection and refraction by manipulating the sampled ray. Direct reflection created a mirror-like material that bounces light back about the normal (0, 0, 1). For refraction, we use Schlick’s Approximation to find the ratio of reflection to refraction energy, which determines how much light “bends” when entering a different material.</p>
@@ -77,7 +81,7 @@
     </p>
 
     <p>
-        To implement the thin-lens model, we need to generate a blue ray that goes from some random sample on the thin lens to the point in focus. To do so, we can first generate a red ray that goes from the center of the lens to the current pixel on the image plane given a x, y coordinate location in the function input. Then, we can uniformly sample the disk that represents the thin lens. We calculate the point in focus by multiplying the (x, y) coordinate in image space by the focalDistance (which was effective here because the origin of the red ray is at the center of the lens, which is all 0’s) and using the red ray to determine where the ray will be at that intersection time. Finally, we can find the direction of the blue ray by finding the difference between the point in focus and the point on the lens, set the blue ray’s origin to be the camera position plus the point on the lens transformed to world coordinates, and set the blue ray’s direction to be the normalized direction transformed into world coordinates.
+        To implement the thin-lens model, we need to generate a blue ray that goes from some random sample on the thin lens to the point in focus. To do so, we can first generate a red ray that goes from the center of the lens to the current pixel on the image plane given a x, y coordinate location in the function input. There are several different ways to define the direction of the red ray. We chose to define it as (x in camera space, y in camera space, -1). Then, we can uniformly sample the disk that represents the thin lens using the equation in the spec. We calculate the point in focus by multiplying the (x, y) coordinate in image space by the focalDistance (which was effective here because the origin of the red ray is at the center of the lens, which is all 0’s) and using the red ray to determine where the ray will be at that intersection time. Finally, we can find the direction of the blue ray by finding the difference between the point in focus and the point on the lens, set the blue ray’s origin to be the camera position plus the point on the lens transformed to world coordinates, and set the blue ray’s direction to be the normalized direction transformed into world coordinates. We set the ray's min_t and max_t appropriately.
     </p>
 
     <h2>Different depths</h2>
