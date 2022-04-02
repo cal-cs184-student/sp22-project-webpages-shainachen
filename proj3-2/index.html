@@ -1,7 +1,158 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Sydney Karimi & Shaina Chen |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3-2: PathTracer</h1>
+    <h2 align="middle">Sydney Karimi and Shaina Chen</h2>
+
+    <div class="padded">
+        <p>In this project, we implemented Task 1 (Mirror and Glass Materials) and Task 4 (Depth of Field). This allowed us to enhance the renders from project 3-1 with new materials and camera capabilities. In Task 1, we implemented reflection and refraction by manipulating the sampled ray. Direct reflection created a mirror-like material that bounces light back about the normal (0, 0, 1). For refraction, we use Schlick’s Approximation to find the ratio of reflection to refraction energy, which determines how much light “bends” when entering a different material.</p>
+        <p>In Task 4, we implemented a thin-lens camera model that would allow us to simulate the appearance of a real camera by using the lens radius and focal distance to keep some elements of an image in focus and some out of focus. Changing the aperature and depth allowed us to focus on specific parts of the image and blur the other parts of the image.</p>
+    <h2 align="middle">Part 1: Ray Generation and Intersection</h2>
+        <img src="images/task1/lucy.png" width="100%">
+
+        <p>In this task, we first implemented the mirror material through reflection, then the glass material using refraction. To implement the mirror material, we filled in the BSDF::reflect() function which reflects a given ray about the normal (0, 0, 1), a direct reflection at the same angle of incidence. Then, we filled in MirrorBSDF::sample_f() to reflect the ray and then return the reflectance divided by the cosine theta of wi.</p>
+        <p>Implementing refraction was a little more involved. First, we implemented BSDF::refract(), which, like the reflect function, returns the wi direction from refraction. Unlike reflection, this will not be a simple reflection about an axis, and instead uses the two indices of refraction (ior) to calculate the angle that the wi ray goes. We check the wo.z value, which is the cosine of theta for the original ray, and this tells us whether the refracted ray wi is entering or exiting the non-air material. If it is entering, we set the variable eta to 1 / ior; if exiting, eta will be ior. Then, we return the new wi vector values according to the following: wi.x = - eta * wo.x, wi.y = -eta * wo.y, and wi.z = -/+ sqrt(1 - eta^2 (1 - wo.z^2)), where wi.z’s sign will be opposite that of wo.z. We also implement RefractionBDSF::sample_f() to handle objects that have a refractive material–in this function, we check if total internal reflection occurs by calculating if the value under the square root in wi.z above is less than zero. If there is total internal reflection, we do not return a refraction value, otherwise, we return transmittance / abs_cos_theta(*wi) / eta ^ 2.</p>
+        <p>Finally, we implemented GlassBDSF::sample_f(). We use Schlick’s approximation to calculate the ratio between the reflection energy to the refraction energy according to the following two functions: R0 = (n1 - n2)^2 / (n1 + n2)^2 and R(theta) = R0 + (1-R0)(1-cos(theta))^5. We check if total internal reflection occurs, in which case we simply return reflectance / abs_cos_theta(*wi). Otherwise, we flip a coin with heads probability equal to Schlick’s reflection coefficient.  If heads, we reflect, setting the pdf to R and returning R * reflectance / abs_cos_theta(*wi), else, we refract, setting the pdf to 1-R and returning (1-R) * transmittance / abs_cos_theta(*wi) / eta^2.</p>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/task1/spheres_0.png" width="480px" />
+                        <figcaption align="middle">In this scene, we can only see the light coming directly from the light source entering the camera. Without any bounces, nothing in the environment is lit.</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/task1/spheres_1.png" width="480px" />
+                        <figcaption align="middle">In this scene, we see some reflection off the spheres that bounces off the surface and into the camera. However, the spheres themselves appear black since light rays do not bounce further. Also, the ceiling is not lit because it relies entirely on light rays bouncing off it.</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="middle">
+                    <img src="images/task1/spheres_2.png" width="480px" />
+                        <figcaption align="middle">Here, we can see the reflection in the left sphere. But, the right sphere is still nearly black because light is not refracting through it and back towards the camera, so we cannot see the glassy effect.</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/task1/spheres_3.png" width="480px" />
+                        <figcaption align="middle">Now we can see the reflection and the refraction. The dark areas are becoming lighter and the light is refracting through the right sphere, leading to the bright circle underneath it. In the reflected sphere, the refracted sphere still appears dark.</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="middle">
+                    <img src="images/task1/spheres_4.png" width="480px" />
+                        <figcaption align="middle">The scene is overall brighter. Now, the right sphere appears glassy and reflects light through to the wall on the right. In the reflection on the left sphere, we can see the clear, glassy reflection of the right sphere.</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/task1/spheres_5.png" width="480px" />
+                        <figcaption align="middle">With more bounces of light, we can see more glassy effects and the scene is brighter still. Otherwise, this picture is not too different from the previous one.</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="middle">
+                    <img src="images/task1/spheres_100.png" width="480px" />
+                        <figcaption align="middle">This scene is particularly noisy due to the effects of the many bounces of light. The shadows in the mirror sphere are much lighter, and on the glass sphere, we can more clearly see how the refraction has allowed us to see hints of red on the right of the sphere and the wall on the left.</figcaption>
+                    </td>
+                </tr>
+
+            </table>
+        </div>
+
+    <h2 align="middle">Part 4: Depth of Field</h2>
+
+    <p>
+        In a pinhole camera, the light enters at a single virtual point so that everything is in focus. However, real cameras that people use today have a lens radius that defines an aperture that results in objects only being in focus if they’re in the plane of focus. This plane of focus is some focalDistance away from the thin lens. Using a thin-lens camera model, we are able to model the effects of a real camera with a set aperture. The thin-lens in particular ignores the actual thickness of the lens but will still allow us to model the focus and blur seen in real images by assuming that the thin lens still refracts light rays normally.
+
+    </p>
+
+    <p>
+        To implement the thin-lens model, we need to generate a blue ray that goes from some random sample on the thin lens to the point in focus. To do so, we can first generate a red ray that goes from the center of the lens to the current pixel on the image plane given a x, y coordinate location in the function input. Then, we can uniformly sample the disk that represents the thin lens. We calculate the point in focus by multiplying the (x, y) coordinate in image space by the focalDistance (which was effective here because the origin of the red ray is at the center of the lens, which is all 0’s) and using the red ray to determine where the ray will be at that intersection time. Finally, we can find the direction of the blue ray by finding the difference between the point in focus and the point on the lens, set the blue ray’s origin to be the camera position plus the point on the lens transformed to world coordinates, and set the blue ray’s direction to be the normalized direction transformed into world coordinates.
+    </p>
+
+    <h2>Different depths</h2>
+    <p>
+        Using a lens radius of 0.1, we can view different depths through the scene by using different focal distances. Here, we focused on 4 different depths by setting the focal distance to 2.9, 3.1, 3.4, and 3.9.
+        We see that as we increase the focal distance, different sections of the dragon will become in focus. Small focal distances mean that parts of the dragon closer to the front (face, especially the edge of the mouth) will be in focus whereas larger focal distances like 3.9 result
+        in parts of the dragon further away (like the tail) being more in focus while closer parts of the dragon are out of focus.
+    </p>
+
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td align="middle">
+                <img src="images/task4/depth/dragon_01_29_l.png" width="480px" />
+                    <figcaption align="middle">focal distance = 2.9</figcaption>
+                </td>
+                <td>
+                    <img src="images/task4/depth/dragon_01_31_l.png" width="480px" />
+                    <figcaption align="middle">focal distance = 3.1</figcaption>
+                </td>
+            </tr>
+            <tr>
+                <td align="middle">
+                <img src="images/task4/depth/dragon_01_34_l.png" width="480px" />
+                <figcaption align="middle">focal distance = 3.4</figcaption>
+            </td>
+                <td>
+                    <img src="images/task4/depth/dragon_01_39_l.png" width="480px" />
+                    <figcaption align="middle">focal distance = 3.9</figcaption>
+                </td>
+            </tr>
+            </table>
+        </div>
+
+        <h2>Different aperture sizes</h2>
+        <p>
+            Using a focal distance of 3.1, we can view different aperture sizes by using different lens radii. Here, we focused on 4 different aperture sizes by setting the lens radius to 0.0, 0.1, 0.14, and 0.23.
+            Clearly, we can see that at a lens radius of 0, the entire scene is in focus. As the lens radius increases, parts of the image that aren't on the plane of focus will appear blurry. This blurry appearance intensifies as the lens radius is increased.
+        </p>
+
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/task4/aperture/dragon_00_31_l.png" width="480px" />
+                    <figcaption align="middle">lens radius = 0.0</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/task4/aperture/dragon_01_31_l.png" width="480px" />
+                        <figcaption align="middle">lens radius = 0.1</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="middle">
+                    <img src="images/task4/aperture/dragon_14_31_l.png" width="480px" />
+                    <figcaption align="middle">lens radius = 0.14</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/task4/aperture/dragon_23_31_l.png" width="480px" />
+                        <figcaption align="middle">lens radius = 0.23</figcaption>
+                    </td>
+                </tr>
+                </table>
+            </div>
+
+    
+    <h2 align="middle">Partner reflection</h2>
+    <p>
+        We worked on this project together by first discussing which parts we wanted to work on and making sure we understood all the concepts needed for this project. 
+        We worked on each task and helped each other with debugging parts that were not working. We also texted to discuss which parts of the writeup to work on and how to merge the various parts of the writeup together.
+    </p>
+
+</body>
 </html>
+
+
+
+
